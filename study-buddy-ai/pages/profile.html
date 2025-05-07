@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Study Buddy AI</title>
+    <link rel="stylesheet" href="../css/styles-css.css">
+    <link rel="stylesheet" href="../css/components-css.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Study Buddy AI</h1>
+                <button class="toggle-sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-avatar">
+                    <span id="user-initial">?</span>
+                </div>
+                <div class="user-details">
+                    <h3 id="user-name">Loading...</h3>
+                    <p id="user-email">Loading...</p>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="../dashboard.html">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="planner.html">
+                            <i class="fas fa-tasks"></i>
+                            <span>Study Planner</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="timer.html">
+                            <i class="fas fa-clock"></i>
+                            <span>Pomodoro Timer</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="notes.html">
+                            <i class="fas fa-sticky-note"></i>
+                            <span>Notes</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="flashcards.html">
+                            <i class="fas fa-clone"></i>
+                            <span>Flashcards</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="progress.html">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Progress</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="profile.html">
+                            <i class="fas fa-user"></i>
+                            <span>Profile</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="btn btn-logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <h1>Profile Settings</h1>
+            </header>
+            
+            <div class="profile-container">
+                <div class="profile-section">
+                    <h2>Personal Information</h2>
+                    <form id="profile-form" class="profile-form">
+                        <div class="form-group">
+                            <label for="display-name">Display Name</label>
+                            <input type="text" id="display-name" name="display-name" placeholder="Enter your name">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" readonly>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="study-goal">Daily Study Goal (hours)</label>
+                            <input type="number" id="study-goal" name="study-goal" min="1" max="24" value="2">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+                
+                <div class="profile-section">
+                    <h2>Preferences</h2>
+                    <div class="preferences-form">
+                        <div class="form-group">
+                            <label>Theme</label>
+                            <div class="theme-options">
+                                <button class="theme-btn light active" data-theme="light">
+                                    <i class="fas fa-sun"></i> Light
+                                </button>
+                                <button class="theme-btn dark" data-theme="dark">
+                                    <i class="fas fa-moon"></i> Dark
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Notifications</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="email-notifications" checked>
+                                    Email Notifications
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="reminder-notifications" checked>
+                                    Study Reminders
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="profile-section">
+                    <h2>Account Management</h2>
+                    <div class="account-actions">
+                        <button id="change-password" class="btn btn-secondary">
+                            <i class="fas fa-key"></i> Change Password
+                        </button>
+                        <button id="delete-account" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Delete Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Loading Spinner -->
+    <div class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+    
+    <!-- Firebase SDK -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>
+    
+    <!-- JavaScript Files -->
+    <script src="../js/firebase-config-js.js"></script>
+    <script src="../js/app-js.js"></script>
+    <script src="../js/profile-js.js"></script>
+</body>
+</html> 

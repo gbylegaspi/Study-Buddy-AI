@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Planner - Study Buddy AI</title>
+    <link rel="stylesheet" href="../css/styles-css.css">
+    <link rel="stylesheet" href="../css/components-css.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- FullCalendar CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Study Buddy AI</h1>
+                <button class="toggle-sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-avatar">
+                    <span id="user-initial">?</span>
+                </div>
+                <div class="user-details">
+                    <h3 id="user-name">Loading...</h3>
+                    <p id="user-email">Loading...</p>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="../dashboard.html">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="planner.html">
+                            <i class="fas fa-tasks"></i>
+                            <span>Study Planner</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="timer.html">
+                            <i class="fas fa-clock"></i>
+                            <span>Pomodoro Timer</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="notes.html">
+                            <i class="fas fa-sticky-note"></i>
+                            <span>Notes</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="flashcards.html">
+                            <i class="fas fa-clone"></i>
+                            <span>Flashcards</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="progress.html">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Progress</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="profile.html">
+                            <i class="fas fa-user"></i>
+                            <span>Profile</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="btn btn-logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <h1>Study Planner</h1>
+                <p class="date-display" id="current-date">Loading date...</p>
+            </header>
+            
+            <div class="dashboard-overview">
+                <div class="overview-card tasks-overview">
+                    <div class="card-header">
+                        <h2>Today's Tasks</h2>
+                        <a href="#" class="btn btn-small" id="add-task-btn">Add Task</a>
+                    </div>
+                    <div class="card-content" id="tasks-list">
+                        <div class="empty-state">
+                            <i class="fas fa-tasks"></i>
+                            <p>No tasks for today</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="overview-card calendar-overview">
+                    <div class="card-header">
+                        <h2>Calendar</h2>
+                    </div>
+                    <div class="card-content">
+                        <div id="calendar"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- New Task Modal -->
+            <div class="modal" id="new-task-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Create New Task</h2>
+                        <button class="close-modal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="new-task-form">
+                            <div class="form-group">
+                                <label for="task-title">Title</label>
+                                <input type="text" id="task-title" name="task-title" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="task-description">Description</label>
+                                <textarea id="task-description" name="task-description"></textarea>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="task-date">Date</label>
+                                    <input type="date" id="task-date" name="task-date" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="task-time">Time</label>
+                                    <input type="time" id="task-time" name="task-time" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="task-priority">Priority</label>
+                                <select id="task-priority" name="task-priority">
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="task-subject">Subject</label>
+                                <input type="text" id="task-subject" name="task-subject" placeholder="e.g., Mathematics, Physics">
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Create Task</button>
+                                <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Loading Spinner -->
+    <div class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+    
+    <!-- Firebase SDK -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>
+    
+    <!-- FullCalendar -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    
+    <!-- JavaScript Files -->
+    <script src="../js/firebase-config-js.js"></script>
+    <script src="../js/app-js.js"></script>
+    <script src="../js/planner-js.js"></script>
+</body>
+</html> 

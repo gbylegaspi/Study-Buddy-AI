@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcards - Study Buddy AI</title>
+    <link rel="stylesheet" href="../css/styles-css.css">
+    <link rel="stylesheet" href="../css/components-css.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Study Buddy AI</h1>
+                <button class="toggle-sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-avatar">
+                    <span id="user-initial">?</span>
+                </div>
+                <div class="user-details">
+                    <h3 id="user-name">Loading...</h3>
+                    <p id="user-email">Loading...</p>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="../dashboard.html">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="planner.html">
+                            <i class="fas fa-tasks"></i>
+                            <span>Study Planner</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="timer.html">
+                            <i class="fas fa-clock"></i>
+                            <span>Pomodoro Timer</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="notes.html">
+                            <i class="fas fa-sticky-note"></i>
+                            <span>Notes</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="flashcards.html">
+                            <i class="fas fa-clone"></i>
+                            <span>Flashcards</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="progress.html">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Progress</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="profile.html">
+                            <i class="fas fa-user"></i>
+                            <span>Profile</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="btn btn-logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <h1>Flashcards</h1>
+                <div class="header-actions">
+                    <button id="new-deck" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> New Deck
+                    </button>
+                    <button id="new-card" class="btn btn-secondary">
+                        <i class="fas fa-plus"></i> New Card
+                    </button>
+                </div>
+            </header>
+            
+            <div class="flashcards-container">
+                <!-- Decks Sidebar -->
+                <div class="decks-sidebar">
+                    <div class="decks-search">
+                        <input type="text" id="deck-search" placeholder="Search decks...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    
+                    <div class="decks-list" id="decks-list">
+                        <!-- Decks will be dynamically populated here -->
+                    </div>
+                </div>
+                
+                <!-- Cards Area -->
+                <div class="cards-area">
+                    <div class="cards-header">
+                        <h2 id="current-deck-name">Select a Deck</h2>
+                        <div class="cards-actions">
+                            <button id="start-review" class="btn btn-primary" disabled>
+                                <i class="fas fa-play"></i> Start Review
+                            </button>
+                            <button id="edit-deck" class="btn btn-secondary" disabled>
+                                <i class="fas fa-edit"></i> Edit Deck
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="cards-grid" id="cards-grid">
+                        <!-- Cards will be dynamically populated here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- New Card Modal -->
+            <div class="modal" id="new-card-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Create New Card</h2>
+                        <button class="close-modal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="new-card-form">
+                            <div class="form-group">
+                                <label for="card-front">Front</label>
+                                <textarea id="card-front" name="card-front" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="card-back">Back</label>
+                                <textarea id="card-back" name="card-back" required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="card-tags">Tags (comma-separated)</label>
+                                <input type="text" id="card-tags" name="card-tags">
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Create Card</button>
+                                <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Review Mode -->
+            <div class="review-mode" id="review-mode" style="display: none;">
+                <div class="card-container">
+                    <div class="flashcard" id="review-card">
+                        <div class="card-inner">
+                            <div class="card-front">
+                                <p id="review-front"></p>
+                            </div>
+                            <div class="card-back">
+                                <p id="review-back"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="review-controls">
+                    <button id="flip-card" class="btn btn-secondary">
+                        <i class="fas fa-sync"></i> Flip Card
+                    </button>
+                    <div class="review-actions">
+                        <button id="mark-hard" class="btn btn-danger">
+                            <i class="fas fa-times"></i> Hard
+                        </button>
+                        <button id="mark-good" class="btn btn-success">
+                            <i class="fas fa-check"></i> Good
+                        </button>
+                        <button id="mark-easy" class="btn btn-primary">
+                            <i class="fas fa-star"></i> Easy
+                        </button>
+                    </div>
+                </div>
+                <div class="review-progress">
+                    <div class="progress-bar">
+                        <div class="progress" id="review-progress"></div>
+                    </div>
+                    <span id="review-count">0/0</span>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Loading Spinner -->
+    <div class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+    
+    <!-- Firebase SDK -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>
+    
+    <!-- JavaScript Files -->
+    <script src="../js/firebase-config-js.js"></script>
+    <script src="../js/app-js.js"></script>
+    <script src="../js/flashcards-js.js"></script>
+</body>
+</html> 

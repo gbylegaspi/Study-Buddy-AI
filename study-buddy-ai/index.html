@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Buddy AI - Your Personal Study Assistant</title>
+    <link rel="stylesheet" href="css/styles-css.css">
+    <link rel="stylesheet" href="css/components-css.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-analytics-compat.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <h1>Study Buddy AI</h1>
+            </div>
+            <nav class="nav">
+                <ul>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="/login" class="btn btn-login">Login</a></li>
+                    <li><a href="/login?signup=true" class="btn btn-primary">Sign Up</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Supercharge Your Study Sessions</h1>
+                <p>Plan, track, and optimize your learning with AI-powered study assistance</p>
+                <a href="/login?signup=true" class="btn btn-large btn-primary">Get Started for Free</a>
+            </div>
+            <div class="hero-image">
+                <!-- Placeholder for hero image -->
+                <div class="placeholder-image">Study Buddy AI Interface Preview</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Powerful Study Tools</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <i class="fas fa-tasks feature-icon"></i>
+                    <h3>Study Planner</h3>
+                    <p>Organize your tasks and deadlines in one place</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-clock feature-icon"></i>
+                    <h3>Focus Timer</h3>
+                    <p>Stay productive with Pomodoro technique</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-sticky-note feature-icon"></i>
+                    <h3>Smart Notes</h3>
+                    <p>Create and organize your study materials</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-robot feature-icon"></i>
+                    <h3>AI Tutor</h3>
+                    <p>Get instant help when you're stuck</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-clone feature-icon"></i>
+                    <h3>Flashcards</h3>
+                    <p>Review effectively with custom flashcards</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-chart-line feature-icon"></i>
+                    <h3>Progress Tracking</h3>
+                    <p>Visualize your study achievements</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="about">
+        <div class="container">
+            <h2 class="section-title">Built for Students, by Students</h2>
+            <p class="about-text">
+                Study Buddy AI combines the best study techniques with modern technology to help you learn more effectively.
+                Whether you're preparing for exams, working on assignments, or learning new skills, our tools are designed to make your study sessions more productive.
+            </p>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="container">
+            <h2>Ready to transform your study habits?</h2>
+            <a href="/login?signup=true" class="btn btn-large btn-primary">Create Your Free Account</a>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Study Buddy AI. All rights reserved.</p>
+            <div class="footer-links">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/firebase-config-js.js"></script>
+    <script src="js/app-js.js"></script>
+</body>
+</html>

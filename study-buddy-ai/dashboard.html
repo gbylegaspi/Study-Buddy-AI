@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Study Buddy AI</title>
+    <link rel="stylesheet" href="css/styles-css.css">
+    <link rel="stylesheet" href="css/components-css.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Study Buddy AI</h1>
+                <button class="toggle-sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-avatar">
+                    <span id="user-initial">?</span>
+                </div>
+                <div class="user-details">
+                    <h3 id="user-name">Loading...</h3>
+                    <p id="user-email">Loading...</p>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="active">
+                        <a href="dashboard.html">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pages/planner.html">
+                            <i class="fas fa-tasks"></i>
+                            <span>Study Planner</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pages/timer.html">
+                            <i class="fas fa-clock"></i>
+                            <span>Pomodoro Timer</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pages/notes.html">
+                            <i class="fas fa-sticky-note"></i>
+                            <span>Notes</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pages/flashcards.html">
+                            <i class="fas fa-clone"></i>
+                            <span>Flashcards</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pages/progress.html">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Progress</span>
+                        </a>
+                    </li>
+                    <li class="ai-feature">
+                        <a href="#" class="soon">
+                            <i class="fas fa-robot"></i>
+                            <span>AI Tutor</span>
+                            <span class="tag">Soon</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="btn btn-logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+                <a href="#" class="btn btn-settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <h1>Welcome Back, <span id="header-name">Student</span>!</h1>
+                <p class="date-display" id="current-date">Loading date...</p>
+            </header>
+            
+            <div class="dashboard-overview">
+                <div class="overview-card tasks-overview">
+                    <div class="card-header">
+                        <h2>Upcoming Tasks</h2>
+                        <a href="pages/planner.html" class="btn btn-small">View All</a>
+                    </div>
+                    <div class="card-content" id="upcoming-tasks">
+                        <div class="empty-state">
+                            <i class="fas fa-tasks"></i>
+                            <p>No upcoming tasks</p>
+                            <a href="pages/planner.html" class="btn btn-primary">Add Tasks</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="overview-card progress-overview">
+                    <div class="card-header">
+                        <h2>Study Progress</h2>
+                        <a href="pages/progress.html" class="btn btn-small">Details</a>
+                    </div>
+                    <div class="card-content">
+                        <div class="progress-chart" id="progress-chart">
+                            <div class="chart-placeholder">
+                                <i class="fas fa-chart-pie"></i>
+                                <p>No progress data yet</p>
+                            </div>
+                        </div>
+                        <div class="progress-stats">
+                            <div class="stat-item">
+                                <span class="stat-value" id="tasks-completed">0</span>
+                                <span class="stat-label">Tasks Completed</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="focus-sessions">0</span>
+                                <span class="stat-label">Focus Sessions</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="study-streak">0</span>
+                                <span class="stat-label">Day Streak</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dashboard-features">
+                <div class="feature-card">
+                    <div class="card-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>Pomodoro Timer</h3>
+                    <p>Stay focused with timed study sessions</p>
+                    <a href="pages/timer.html" class="btn btn-primary">Start Session</a>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="card-icon">
+                        <i class="fas fa-sticky-note"></i>
+                    </div>
+                    <h3>Notes</h3>
+                    <p>Organize your study materials</p>
+                    <a href="pages/notes.html" class="btn btn-primary">Take Notes</a>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="card-icon">
+                        <i class="fas fa-clone"></i>
+                    </div>
+                    <h3>Flashcards</h3>
+                    <p>Review with custom flashcards</p>
+                    <a href="pages/flashcards.html" class="btn btn-primary">Create Cards</a>
+                </div>
+                
+                <div class="feature-card coming-soon">
+                    <div class="card-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>AI Tutor</h3>
+                    <p>Get help from our AI assistant</p>
+                    <span class="btn btn-disabled">Coming Soon</span>
+                    <span class="soon-tag">Phase 2</span>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Loading Spinner -->
+    <div class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+    
+    <!-- Firebase SDK -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-analytics-compat.min.js"></script>
+    
+    <!-- JavaScript Files -->
+    <script src="js/firebase-config-js.js"></script>
+    <script src="js/app-js.js"></script>
+</body>
+</html>
