@@ -15,9 +15,13 @@ let quill;
 let currentNoteId = null;
 let currentFolder = 'all';
 let notes = [];
+let autoSaveTimeout = null;
+let isDirty = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing notes page...');
+    
     // Initialize Quill editor
     quill = new Quill('#editor', {
         theme: 'snow',
@@ -32,6 +36,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 ['clean']
             ]
         }
+    });
+    
+    // Add change listener for auto-save
+    quill.on('text-change', function() {
+        isDirty = true;
+        if (autoSaveTimeout) {
+            clearTimeout(autoSaveTimeout);
+        }
+        autoSaveTimeout = setTimeout(autoSaveNote, 2000);
     });
     
     // Load notes
@@ -70,6 +83,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Add beforeunload event listener
+    window.addEventListener('beforeunload', function(e) {
+        if (isDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+    
     // Hide loading spinner after delay
     setTimeout(() => {
         loadingOverlay.classList.add('hidden');
@@ -78,12 +99,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Load notes from Firestore
 function loadNotes() {
-    if (!db) return;
+    if (!db) {
+        console.error('Database not initialized');
+        return;
+    }
+    
+    console.log('Loading notes...');
     
     // Show loading
     loadingOverlay.classList.remove('hidden');
     
     checkAuth().then(user => {
+        console.log('User authenticated, loading notes for:', user.uid);
+        
         db.collection('users').doc(user.uid).collection('notes')
             .orderBy('updatedAt', 'desc')
             .get()
@@ -93,12 +121,18 @@ function loadNotes() {
                     notes = [];
                     
                     if (querySnapshot.empty) {
+                        console.log('No notes found');
                         notesList.innerHTML = `
-                            <div class="empty-state">
+                            <div class="empty-state animate__animated animate__fadeIn">
+                                <i class="fas fa-sticky-note"></i>
                                 <p>No notes found</p>
+                                <button class="btn btn-primary" onclick="createNewNote()">
+                                    <i class="fas fa-plus"></i> Create Note
+                                </button>
                             </div>
                         `;
                     } else {
+                        console.log('Found', querySnapshot.size, 'notes');
                         querySnapshot.forEach(doc => {
                             const note = doc.data();
                             note.id = doc.id;
@@ -123,8 +157,12 @@ function loadNotes() {
                 
                 if (notesList) {
                     notesList.innerHTML = `
-                        <div class="error-state">
+                        <div class="error-state animate__animated animate__fadeIn">
+                            <i class="fas fa-exclamation-circle"></i>
                             <p>Error loading notes</p>
+                            <button class="btn btn-primary" onclick="loadNotes()">
+                                <i class="fas fa-sync"></i> Retry
+                            </button>
                         </div>
                     `;
                 }
@@ -141,7 +179,7 @@ function loadNotes() {
 // Create note element
 function createNoteElement(note) {
     const noteElement = document.createElement('div');
-    noteElement.className = 'note-item';
+    noteElement.className = 'note-item animate__animated animate__fadeIn';
     noteElement.dataset.noteId = note.id;
     
     // Format date
@@ -174,6 +212,8 @@ function createNoteElement(note) {
 
 // Select a note
 function selectNote(note) {
+    console.log('Selecting note:', note.id);
+    
     // Set current note ID
     currentNoteId = note.id;
     
@@ -192,91 +232,126 @@ function selectNote(note) {
     
     // Enable delete button
     deleteNoteBtn.disabled = false;
+    
+    // Reset dirty state
+    isDirty = false;
+}
+
+// Auto-save note
+function autoSaveNote() {
+    if (!isDirty || !currentNoteId) return;
+    
+    console.log('Auto-saving note...');
+    saveNote(true);
 }
 
 // Save note
-function saveNote() {
-    if (!db) return;
+function saveNote(isAutoSave = false) {
+    if (!db) {
+        console.error('Database not initialized');
+        return;
+    }
     
-    const title = noteTitle.value.trim() || 'Untitled Note';
-    const content = quill.root.innerHTML;
+    if (!currentNoteId) {
+        console.log('Creating new note...');
+        createNewNote();
+        return;
+    }
+    
+    console.log('Saving note:', currentNoteId);
     
     // Show loading
-    loadingOverlay.classList.remove('hidden');
+    if (!isAutoSave) {
+        loadingOverlay.classList.remove('hidden');
+    }
     
     checkAuth().then(user => {
-        if (currentNoteId) {
-            // Update existing note
-            db.collection('users').doc(user.uid).collection('notes')
-                .doc(currentNoteId)
-                .update({
-                    title: title,
-                    content: content,
-                    updatedAt: new Date()
-                })
-                .then(() => {
-                    updateNoteInList();
-                    // Hide loading
+        const noteData = {
+            title: noteTitle.value || 'Untitled Note',
+            content: quill.root.innerHTML,
+            folder: currentFolder === 'all' ? null : currentFolder,
+            updatedAt: firebase.firestore.Timestamp.fromDate(new Date())
+        };
+        
+        db.collection('users').doc(user.uid).collection('notes').doc(currentNoteId)
+            .update(noteData)
+            .then(() => {
+                console.log('Note saved successfully');
+                
+                // Update note in list
+                updateNoteInList(noteData);
+                
+                // Reset dirty state
+                isDirty = false;
+                
+                // Hide loading
+                if (!isAutoSave) {
                     loadingOverlay.classList.add('hidden');
-                })
-                .catch(error => {
-                    console.error('Error updating note:', error);
-                    alert('Failed to save note. Please try again.');
-                    
-                    // Hide loading
+                }
+            })
+            .catch(error => {
+                console.error('Error saving note:', error);
+                
+                // Show error message
+                if (!isAutoSave) {
+                    alert('Error saving note. Please try again.');
+                }
+                
+                // Hide loading
+                if (!isAutoSave) {
                     loadingOverlay.classList.add('hidden');
-                });
-        } else {
-            // Create new note
-            db.collection('users').doc(user.uid).collection('notes')
-                .add({
-                    title: title,
-                    content: content,
-                    folder: currentFolder === 'all' ? 'study notes' : currentFolder,
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                })
-                .then(docRef => {
-                    // Set current note ID
-                    currentNoteId = docRef.id;
-                    
-                    // Add note to list
-                    const newNote = {
-                        id: docRef.id,
-                        title: title,
-                        content: content,
-                        folder: currentFolder === 'all' ? 'study notes' : currentFolder,
-                        createdAt: new Date(),
-                        updatedAt: new Date()
-                    };
-                    
-                    notes.unshift(newNote);
-                    
-                    // Add to UI
-                    const noteElement = createNoteElement(newNote);
-                    if (notesList.firstChild) {
-                        notesList.insertBefore(noteElement, notesList.firstChild);
-                    } else {
-                        notesList.appendChild(noteElement);
-                    }
-                    
-                    // Select the new note
-                    selectNote(newNote);
-                    
-                    // Hide loading
-                    loadingOverlay.classList.add('hidden');
-                })
-                .catch(error => {
-                    console.error('Error creating note:', error);
-                    alert('Failed to create note. Please try again.');
-                    
-                    // Hide loading
-                    loadingOverlay.classList.add('hidden');
-                });
-        }
+                }
+            });
     }).catch(error => {
         console.error('Authentication check failed:', error);
-        loadingOverlay.classList.add('hidden');
+        if (!isAutoSave) {
+            loadingOverlay.classList.add('hidden');
+        }
+    });
+}
+
+// Create new note
+function createNewNote() {
+    console.log('Creating new note...');
+    
+    // Reset editor
+    noteTitle.value = '';
+    quill.root.innerHTML = '';
+    
+    // Create note in Firestore
+    checkAuth().then(user => {
+        const noteData = {
+            title: '',
+            content: '',
+            folder: currentFolder === 'all' ? null : currentFolder,
+            createdAt: firebase.firestore.Timestamp.fromDate(new Date()),
+            updatedAt: firebase.firestore.Timestamp.fromDate(new Date())
+        };
+        
+        db.collection('users').doc(user.uid).collection('notes')
+            .add(noteData)
+            .then(docRef => {
+                console.log('New note created:', docRef.id);
+                
+                // Add note to list
+                noteData.id = docRef.id;
+                notes.unshift(noteData);
+                
+                const noteElement = createNoteElement(noteData);
+                notesList.insertBefore(noteElement, notesList.firstChild);
+                
+                // Select new note
+                selectNote(noteData);
+                
+                // Reset dirty state
+                isDirty = false;
+            })
+            .catch(error => {
+                console.error('Error creating note:', error);
+                alert('Error creating note. Please try again.');
+            });
+    }).catch(error => {
+        console.error('Authentication check failed:', error);
     });
 }
 
@@ -284,30 +359,33 @@ function saveNote() {
 function deleteNote() {
     if (!currentNoteId) return;
     
-    if (!confirm('Are you sure you want to delete this note?')) return;
+    if (!confirm('Are you sure you want to delete this note?')) {
+        return;
+    }
+    
+    console.log('Deleting note:', currentNoteId);
     
     // Show loading
     loadingOverlay.classList.remove('hidden');
     
     checkAuth().then(user => {
-        db.collection('users').doc(user.uid).collection('notes')
-            .doc(currentNoteId)
+        db.collection('users').doc(user.uid).collection('notes').doc(currentNoteId)
             .delete()
             .then(() => {
-                // Remove note from array
-                notes = notes.filter(note => note.id !== currentNoteId);
+                console.log('Note deleted successfully');
                 
-                // Remove note from UI
+                // Remove note from list
                 const noteElement = document.querySelector(`.note-item[data-note-id="${currentNoteId}"]`);
                 if (noteElement) {
                     noteElement.remove();
                 }
                 
-                // Clear editor
+                // Remove from notes array
+                notes = notes.filter(note => note.id !== currentNoteId);
+                
+                // Reset editor
                 noteTitle.value = '';
                 quill.root.innerHTML = '';
-                
-                // Reset current note ID
                 currentNoteId = null;
                 
                 // Disable delete button
@@ -319,8 +397,12 @@ function deleteNote() {
                 } else {
                     // Show empty state
                     notesList.innerHTML = `
-                        <div class="empty-state">
+                        <div class="empty-state animate__animated animate__fadeIn">
+                            <i class="fas fa-sticky-note"></i>
                             <p>No notes found</p>
+                            <button class="btn btn-primary" onclick="createNewNote()">
+                                <i class="fas fa-plus"></i> Create Note
+                            </button>
                         </div>
                     `;
                 }
@@ -330,9 +412,7 @@ function deleteNote() {
             })
             .catch(error => {
                 console.error('Error deleting note:', error);
-                alert('Failed to delete note. Please try again.');
-                
-                // Hide loading
+                alert('Error deleting note. Please try again.');
                 loadingOverlay.classList.add('hidden');
             });
     }).catch(error => {
@@ -341,155 +421,91 @@ function deleteNote() {
     });
 }
 
-// Create new note
-function createNewNote() {
-    // Clear editor
-    noteTitle.value = '';
-    quill.root.innerHTML = '';
-    
-    // Reset current note ID
-    currentNoteId = null;
-    
-    // Deselect all notes
-    const noteItems = document.querySelectorAll('.note-item');
-    noteItems.forEach(item => {
-        item.classList.remove('active');
-    });
-    
-    // Focus on title
-    noteTitle.focus();
-}
-
-// Filter notes by search term
+// Filter notes by search
 function filterNotes() {
-    const searchTerm = noteSearch.value.toLowerCase().trim();
+    const searchTerm = noteSearch.value.toLowerCase();
     
     if (!searchTerm) {
-        // Show all notes
-        filterNotesByFolder(currentFolder);
+        // Show all notes if search is empty
+        updateNotesListUI(notes);
         return;
     }
     
-    // Filter notes by title and content
     const filteredNotes = notes.filter(note => {
-        // Match by title
-        if (note.title && note.title.toLowerCase().includes(searchTerm)) {
-            return true;
-        }
-        
-        // Match by content (strip HTML)
-        if (note.content) {
-            const contentText = note.content.replace(/<[^>]*>/g, '').toLowerCase();
-            if (contentText.includes(searchTerm)) {
-                return true;
-            }
-        }
-        
-        return false;
+        const title = (note.title || '').toLowerCase();
+        const content = (note.content || '').toLowerCase();
+        return title.includes(searchTerm) || content.includes(searchTerm);
     });
     
-    // Update UI
     updateNotesListUI(filteredNotes);
 }
 
 // Filter notes by folder
 function filterNotesByFolder(folderName) {
-    if (folderName === 'all notes') {
-        // Show all notes
+    console.log('Filtering notes by folder:', folderName);
+    
+    if (folderName === 'all') {
         updateNotesListUI(notes);
-    } else {
-        // Filter by folder
-        const filteredNotes = notes.filter(note => {
-            return note.folder && note.folder.toLowerCase() === folderName.toLowerCase();
-        });
-        
-        // Update UI
-        updateNotesListUI(filteredNotes);
+        return;
     }
+    
+    const filteredNotes = notes.filter(note => note.folder === folderName);
+    updateNotesListUI(filteredNotes);
 }
 
 // Update notes list UI
 function updateNotesListUI(notesToShow) {
     if (!notesList) return;
     
-    notesList.innerHTML = ''; // Clear previous content
+    notesList.innerHTML = '';
     
     if (notesToShow.length === 0) {
         notesList.innerHTML = `
-            <div class="empty-state">
+            <div class="empty-state animate__animated animate__fadeIn">
+                <i class="fas fa-search"></i>
                 <p>No notes found</p>
             </div>
         `;
-    } else {
-        notesToShow.forEach(note => {
-            const noteElement = createNoteElement(note);
-            notesList.appendChild(noteElement);
-            
-            // Highlight current note if it's in the filtered list
-            if (note.id === currentNoteId) {
-                noteElement.classList.add('active');
-            }
-        });
+        return;
     }
+    
+    notesToShow.forEach(note => {
+        const noteElement = createNoteElement(note);
+        notesList.appendChild(noteElement);
+    });
 }
 
-// Update note in list after saving
-function updateNoteInList() {
-    if (!currentNoteId) return;
-    
-    // Find the note in the array
+// Update note in list
+function updateNoteInList(noteData) {
     const noteIndex = notes.findIndex(note => note.id === currentNoteId);
-    
     if (noteIndex !== -1) {
-        // Update the note
-        notes[noteIndex].title = noteTitle.value.trim() || 'Untitled Note';
-        notes[noteIndex].content = quill.root.innerHTML;
-        notes[noteIndex].updatedAt = new Date();
+        notes[noteIndex] = { ...notes[noteIndex], ...noteData };
         
-        // Update the UI
         const noteElement = document.querySelector(`.note-item[data-note-id="${currentNoteId}"]`);
-        
         if (noteElement) {
-            // Format date
-            const formattedDate = formatDate(new Date());
-            
-            // Get content preview
-            const contentPreview = quill.getText().substring(0, 50);
-            
-            // Update note element
-            noteElement.querySelector('h3').textContent = notes[noteIndex].title || 'Untitled Note';
-            noteElement.querySelector('.note-preview').textContent = contentPreview + (contentPreview.length >= 50 ? '...' : '');
-            noteElement.querySelector('.note-date').textContent = formattedDate;
+            const newNoteElement = createNoteElement(notes[noteIndex]);
+            noteElement.replaceWith(newNoteElement);
         }
     }
 }
 
 // Format date
 function formatDate(date) {
-    if (!date) return 'Unknown date';
-    
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
+    const diff = now - date;
     
-    // If today
-    if (diff < 24 * 60 * 60 * 1000 && 
-        now.getDate() === date.getDate() && 
-        now.getMonth() === date.getMonth() && 
-        now.getFullYear() === date.getFullYear()) {
-        return 'Today at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // If less than 24 hours ago
+    if (diff < 24 * 60 * 60 * 1000) {
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     }
     
-    // If yesterday
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    if (yesterday.getDate() === date.getDate() && 
-        yesterday.getMonth() === date.getMonth() && 
-        yesterday.getFullYear() === date.getFullYear()) {
-        return 'Yesterday at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // If less than 7 days ago
+    if (diff < 7 * 24 * 60 * 60 * 1000) {
+        return date.toLocaleDateString('en-US', { weekday: 'short' });
     }
     
-    // Otherwise show date
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    // Otherwise show full date
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 // Add custom styles

@@ -87,42 +87,70 @@ function loadUserData() {
 
 // Load study data from Firestore
 function loadStudyData(userId) {
-    if (!db) return Promise.resolve();
+    if (!db) {
+        console.error('Database not initialized');
+        return Promise.resolve();
+    }
+    
+    console.log('Loading study data for user:', userId);
     
     // Get user document
     return db.collection('users').doc(userId).get()
         .then(doc => {
             if (doc.exists) {
                 const userData = doc.data();
+                console.log('User data found:', userData);
                 
                 // Load upcoming tasks
                 return loadUpcomingTasks(userId).then(() => userData);
             } else {
-                console.log('No user data found!');
-                return {};
+                console.log('No user data found, creating new user document');
+                // Create user document if it doesn't exist
+                const userData = {
+                    tasksCompleted: 0,
+                    focusSessions: 0,
+                    streak: 0,
+                    createdAt: firebase.firestore.Timestamp.fromDate(new Date()),
+                    updatedAt: firebase.firestore.Timestamp.fromDate(new Date())
+                };
+                
+                return db.collection('users').doc(userId).set(userData)
+                    .then(() => {
+                        console.log('Created new user document');
+                        return loadUpcomingTasks(userId).then(() => userData);
+                    });
             }
         })
         .then(userData => {
             // Update stats
             updateStats(userData);
+        })
+        .catch(error => {
+            console.error('Error in loadStudyData:', error);
         });
 }
 
 // Load upcoming tasks
 function loadUpcomingTasks(userId) {
-    if (!db || !upcomingTasks) return Promise.resolve();
+    if (!db || !upcomingTasks) {
+        console.error('Database or upcoming tasks element not found');
+        return Promise.resolve();
+    }
     
-    // Get tasks collection
+    console.log('Loading tasks for user:', userId);
+    
+    // Get tasks collection - simplified query to avoid index requirement
     return db.collection('users').doc(userId).collection('tasks')
         .where('completed', '==', false)
-        .orderBy('dueDate', 'asc')
-        .limit(5)
         .get()
         .then(querySnapshot => {
+            console.log('Tasks query result:', querySnapshot.size, 'tasks found');
+            
             if (querySnapshot.empty) {
+                console.log('No tasks found, showing empty state');
                 // No tasks found, show empty state
                 upcomingTasks.innerHTML = `
-                    <div class="empty-state">
+                    <div class="empty-state animate__animated animate__fadeIn">
                         <i class="fas fa-tasks"></i>
                         <p>No upcoming tasks</p>
                         <a href="pages/planner.html" class="btn btn-primary">Add Tasks</a>
@@ -134,14 +162,33 @@ function loadUpcomingTasks(userId) {
             // Clear current content
             upcomingTasks.innerHTML = '';
             
-            // Add tasks to the list
+            // Convert to array and sort by due date
+            const tasks = [];
             querySnapshot.forEach(doc => {
-                const task = doc.data();
+                tasks.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // Sort tasks by due date
+            tasks.sort((a, b) => {
+                const dateA = a.dueDate?.toDate() || new Date(0);
+                const dateB = b.dueDate?.toDate() || new Date(0);
+                return dateA - dateB;
+            });
+            
+            // Take only the first 5 tasks
+            const recentTasks = tasks.slice(0, 5);
+            
+            // Add tasks to the list
+            recentTasks.forEach((task, index) => {
+                console.log('Processing task:', task);
+                
                 const dueDate = task.dueDate?.toDate() || new Date();
                 const formattedDate = dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 
                 const taskElement = document.createElement('div');
-                taskElement.className = 'task-item';
+                taskElement.className = 'task-item animate__animated animate__fadeIn';
+                taskElement.style.animationDelay = `${index * 0.1}s`;
+                
                 taskElement.innerHTML = `
                     <div class="task-info">
                         <h3 class="task-title">${task.title}</h3>
@@ -152,7 +199,7 @@ function loadUpcomingTasks(userId) {
                             <i class="fas fa-calendar-alt"></i> ${formattedDate}
                         </span>
                         <span class="task-priority ${task.priority || 'medium'}">
-                            ${task.priority || 'Medium'}
+                            ${task.priority ? task.priority.charAt(0).toUpperCase() + task.priority.slice(1) : 'Medium'}
                         </span>
                     </div>
                 `;
@@ -163,7 +210,7 @@ function loadUpcomingTasks(userId) {
         .catch(error => {
             console.error('Error loading tasks:', error);
             upcomingTasks.innerHTML = `
-                <div class="error-state">
+                <div class="error-state animate__animated animate__fadeIn">
                     <i class="fas fa-exclamation-circle"></i>
                     <p>Error loading tasks</p>
                 </div>
@@ -173,16 +220,34 @@ function loadUpcomingTasks(userId) {
 
 // Update stats display
 function updateStats(userData) {
+    // Animate stats counting up
+    function animateValue(element, start, end, duration) {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            const value = Math.floor(progress * (end - start) + start);
+            element.textContent = value;
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
+    }
+    
     if (tasksCompleted) {
-        tasksCompleted.textContent = userData.tasksCompleted || 0;
+        const value = userData.tasksCompleted || 0;
+        animateValue(tasksCompleted, 0, value, 1000);
     }
     
     if (focusSessions) {
-        focusSessions.textContent = userData.focusSessions || 0;
+        const value = userData.focusSessions || 0;
+        animateValue(focusSessions, 0, value, 1000);
     }
     
     if (studyStreak) {
-        studyStreak.textContent = userData.streak || 0;
+        const value = userData.streak || 0;
+        animateValue(studyStreak, 0, value, 1000);
     }
     
     // In a real app, we would implement chart rendering here
@@ -190,7 +255,7 @@ function updateStats(userData) {
     if (progressChart) {
         // For now, just show placeholder
         progressChart.innerHTML = `
-            <div class="chart-placeholder">
+            <div class="chart-placeholder animate__animated animate__fadeIn">
                 <i class="fas fa-chart-pie"></i>
                 <p>Progress data will appear here</p>
             </div>
@@ -198,78 +263,38 @@ function updateStats(userData) {
     }
 }
 
-// Add custom styles to task items
+// Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    // Add this CSS to the page
-    const style = document.createElement('style');
-    style.textContent = `
-        .task-item {
-            padding: 15px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .task-item:last-child {
-            border-bottom: none;
-        }
-        
-        .task-title {
-            font-size: 1.1rem;
-            margin-bottom: 5px;
-        }
-        
-        .task-subject {
-            font-size: 0.9rem;
-            color: var(--secondary-color);
-        }
-        
-        .task-meta {
-            text-align: right;
-            font-size: 0.9rem;
-        }
-        
-        .task-date {
-            display: block;
-            margin-bottom: 5px;
-        }
-        
-        .task-priority {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.8rem;
-        }
-        
-        .task-priority.high {
-            background-color: #ffecec;
-            color: var(--danger-color);
-        }
-        
-        .task-priority.medium {
-            background-color: #fff8e5;
-            color: #d9980d;
-        }
-        
-        .task-priority.low {
-            background-color: #e5f9e5;
-            color: var(--success-color);
-        }
-    `;
-    document.head.appendChild(style);
-});
-
-// Initialize app
-document.addEventListener('DOMContentLoaded', function() {
-    // Load user data when the page is ready
+    console.log('DOM Content Loaded');
+    
+    // Load user data
     loadUserData();
     
-    // Hide loading overlay with slight delay to prevent flash
-    setTimeout(() => {
-        loadingOverlay.classList.add('hidden');
-    }, 1000);
+    // Set active nav item
+    setActiveNavItem();
 });
+
+// Set active nav item
+function setActiveNavItem() {
+    const currentPath = window.location.pathname;
+    const navItems = document.querySelectorAll('.sidebar-nav li');
+    
+    console.log('Current path:', currentPath);
+    
+    navItems.forEach(item => {
+        const link = item.querySelector('a');
+        const linkPath = link.getAttribute('href');
+        console.log('Checking link:', linkPath);
+        
+        // Check if the current path ends with the link path
+        if (currentPath.endsWith(linkPath)) {
+            item.classList.add('active');
+            console.log('Set active:', linkPath);
+        } else {
+            item.classList.remove('active');
+        }
+    });
+}
 
 // Mobile sidebar toggle
 const toggleSidebar = document.querySelector('.toggle-sidebar');
@@ -291,21 +316,3 @@ document.addEventListener('click', (e) => {
         sidebarElement.classList.remove('active');
     }
 });
-
-// Set active navigation item based on current page
-function setActiveNavItem() {
-    const currentPath = window.location.pathname;
-    const navItems = document.querySelectorAll('.sidebar-nav li');
-    
-    navItems.forEach(item => {
-        const link = item.querySelector('a');
-        if (link && link.getAttribute('href') === currentPath.split('/').pop()) {
-            item.classList.add('active');
-        } else {
-            item.classList.remove('active');
-        }
-    });
-}
-
-// Call on page load
-document.addEventListener('DOMContentLoaded', setActiveNavItem);

@@ -1,11 +1,22 @@
 // DOM Elements
-const tasksList = document.getElementById('tasks-list');
-const addTaskBtn = document.getElementById('add-task-btn');
-const newTaskModal = document.getElementById('new-task-modal');
-const newTaskForm = document.getElementById('new-task-form');
-const closeModalBtns = document.querySelectorAll('.close-modal');
-const calendarEl = document.getElementById('calendar');
-const loadingOverlay = document.querySelector('.loading-overlay');
+const plannerTasksList = document.getElementById('tasks-list');
+const plannerAddTaskBtn = document.getElementById('add-task-btn');
+const plannerNewTaskModal = document.getElementById('new-task-modal');
+const plannerNewTaskForm = document.getElementById('new-task-form');
+const plannerCloseModalBtns = document.querySelectorAll('.close-modal');
+const plannerCalendarEl = document.getElementById('calendar');
+const plannerLoadingOverlay = document.querySelector('.loading-overlay');
+
+// Debug logging
+console.log('DOM Elements:', {
+    tasksList: plannerTasksList,
+    addTaskBtn: plannerAddTaskBtn,
+    newTaskModal: plannerNewTaskModal,
+    newTaskForm: plannerNewTaskForm,
+    closeModalBtns: plannerCloseModalBtns,
+    calendarEl: plannerCalendarEl,
+    loadingOverlay: plannerLoadingOverlay
+});
 
 // Global variables
 let calendar;
@@ -13,6 +24,8 @@ let tasks = [];
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded');
+    
     // Set today's date in task form
     const today = new Date();
     const formattedDate = today.toISOString().split('T')[0];
@@ -25,31 +38,39 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeCalendar();
     
     // Event listeners
-    if (addTaskBtn) {
-        addTaskBtn.addEventListener('click', showNewTaskModal);
+    console.log('Setting up event listeners');
+    if (plannerAddTaskBtn) {
+        console.log('Add Task button found, adding click listener');
+        plannerAddTaskBtn.addEventListener('click', function(e) {
+            console.log('Add Task button clicked');
+            e.preventDefault();
+            showNewTaskModal();
+        });
+    } else {
+        console.error('Add Task button not found!');
     }
     
     // New task form submission
-    if (newTaskForm) {
-        newTaskForm.addEventListener('submit', createNewTask);
+    if (plannerNewTaskForm) {
+        plannerNewTaskForm.addEventListener('submit', createNewTask);
     }
     
     // Close modal
-    closeModalBtns.forEach(btn => {
+    plannerCloseModalBtns.forEach(btn => {
         btn.addEventListener('click', closeModals);
     });
     
     // Hide loading spinner after delay
     setTimeout(() => {
-        loadingOverlay.classList.add('hidden');
+        plannerLoadingOverlay.classList.add('hidden');
     }, 1000);
 });
 
 // Initialize FullCalendar
 function initializeCalendar() {
-    if (!calendarEl) return;
+    if (!plannerCalendarEl) return;
     
-    calendar = new FullCalendar.Calendar(calendarEl, {
+    calendar = new FullCalendar.Calendar(plannerCalendarEl, {
         initialView: 'dayGridMonth',
         headerToolbar: {
             left: 'prev,next today',
@@ -75,7 +96,7 @@ function loadTasks() {
     if (!db) return;
     
     // Show loading
-    loadingOverlay.classList.remove('hidden');
+    plannerLoadingOverlay.classList.remove('hidden');
     
     checkAuth().then(user => {
         db.collection('users').doc(user.uid).collection('tasks')
@@ -101,8 +122,12 @@ function loadTasks() {
                         const taskDate = new Date(dueDate);
                         taskDate.setHours(0, 0, 0, 0);
                         
+                        // Compare dates using timestamp
                         if (taskDate.getTime() === today.getTime()) {
-                            todayTasks.push(task);
+                            todayTasks.push({
+                                ...task,
+                                dueDate: dueDate // Ensure we have the proper Date object
+                            });
                         }
                         
                         // Add to calendar
@@ -123,6 +148,9 @@ function loadTasks() {
                     }
                 });
                 
+                console.log('Today\'s tasks:', todayTasks);
+                console.log('Calendar events:', calendarEvents);
+                
                 // Update Today's Tasks section
                 updateTodayTasksList(todayTasks);
                 
@@ -135,13 +163,13 @@ function loadTasks() {
                 }
                 
                 // Hide loading
-                loadingOverlay.classList.add('hidden');
+                plannerLoadingOverlay.classList.add('hidden');
             })
             .catch(error => {
                 console.error('Error loading tasks:', error);
                 
-                if (tasksList) {
-                    tasksList.innerHTML = `
+                if (plannerTasksList) {
+                    plannerTasksList.innerHTML = `
                         <div class="error-state">
                             <i class="fas fa-exclamation-circle"></i>
                             <p>Error loading tasks</p>
@@ -150,20 +178,20 @@ function loadTasks() {
                 }
                 
                 // Hide loading
-                loadingOverlay.classList.add('hidden');
+                plannerLoadingOverlay.classList.add('hidden');
             });
     }).catch(error => {
         console.error('Authentication check failed:', error);
-        loadingOverlay.classList.add('hidden');
+        plannerLoadingOverlay.classList.add('hidden');
     });
 }
 
 // Update Today's Tasks section
 function updateTodayTasksList(todayTasks) {
-    if (!tasksList) return;
+    if (!plannerTasksList) return;
     
     if (todayTasks.length === 0) {
-        tasksList.innerHTML = `
+        plannerTasksList.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-tasks"></i>
                 <p>No tasks for today</p>
@@ -172,11 +200,11 @@ function updateTodayTasksList(todayTasks) {
         return;
     }
     
-    tasksList.innerHTML = '';
+    plannerTasksList.innerHTML = '';
     
     todayTasks.forEach(task => {
         const taskElement = createTaskElement(task);
-        tasksList.appendChild(taskElement);
+        plannerTasksList.appendChild(taskElement);
     });
 }
 
@@ -251,38 +279,47 @@ function createTaskElement(task) {
 
 // Show new task modal
 function showNewTaskModal() {
-    if (newTaskModal) {
-        newTaskModal.style.display = 'block';
-        
-        // Reset form
-        if (newTaskForm) {
-            newTaskForm.reset();
-            
-            // Set current date
-            const today = new Date();
-            const formattedDate = today.toISOString().split('T')[0];
-            document.getElementById('task-date').value = formattedDate;
-            
-            // Set default time (1 hour from now)
-            const nextHour = new Date(today.getTime() + 60 * 60 * 1000);
-            const hours = String(nextHour.getHours()).padStart(2, '0');
-            const minutes = String(nextHour.getMinutes()).padStart(2, '0');
-            document.getElementById('task-time').value = `${hours}:${minutes}`;
-            
-            // Set form title
-            document.querySelector('#new-task-modal .modal-header h2').textContent = 'Create New Task';
-            
-            // Change submit button text
-            document.querySelector('#new-task-form .btn-primary').textContent = 'Create Task';
-        }
+    console.log('showNewTaskModal called');
+    if (!plannerNewTaskModal) {
+        console.error('Modal element not found!');
+        return;
     }
+    
+    // Reset form and remove any existing task ID
+    if (plannerNewTaskForm) {
+        plannerNewTaskForm.reset();
+        const taskIdField = document.getElementById('task-id');
+        if (taskIdField) {
+            taskIdField.remove();
+        }
+        
+        // Set current date
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+        document.getElementById('task-date').value = formattedDate;
+        
+        // Set default time (1 hour from now)
+        const nextHour = new Date(today.getTime() + 60 * 60 * 1000);
+        const hours = String(nextHour.getHours()).padStart(2, '0');
+        const minutes = String(nextHour.getMinutes()).padStart(2, '0');
+        document.getElementById('task-time').value = `${hours}:${minutes}`;
+        
+        // Set form title
+        document.querySelector('#new-task-modal .modal-header h2').textContent = 'Create New Task';
+        
+        // Change submit button text
+        document.querySelector('#new-task-form .btn-primary').textContent = 'Create Task';
+    }
+    
+    // Show modal
+    plannerNewTaskModal.style.display = 'block';
+    console.log('Modal display set to block');
 }
 
 // Close modals
 function closeModals() {
-    if (newTaskModal) {
-        newTaskModal.style.display = 'none';
-    }
+    if (!plannerNewTaskModal) return;
+    plannerNewTaskModal.style.display = 'none';
 }
 
 // Create new task
@@ -303,11 +340,8 @@ function createNewTask(e) {
         return;
     }
     
-    // Close modal
-    closeModals();
-    
     // Show loading
-    loadingOverlay.classList.remove('hidden');
+    plannerLoadingOverlay.classList.remove('hidden');
     
     // Convert date and time to Date object
     const dueDate = new Date(taskDate);
@@ -331,12 +365,12 @@ function createNewTask(e) {
         const taskData = {
             title: taskTitle,
             description: taskDescription,
-            dueDate: dueDate,
+            dueDate: firebase.firestore.Timestamp.fromDate(dueDate), // Convert to Firestore Timestamp
             time: taskTime,
             priority: taskPriority,
             subject: taskSubject,
             completed: false,
-            updatedAt: new Date()
+            updatedAt: firebase.firestore.Timestamp.fromDate(new Date())
         };
         
         let savePromise;
@@ -345,18 +379,29 @@ function createNewTask(e) {
             // Update existing task
             savePromise = tasksRef.doc(taskId).update({
                 ...taskData,
-                updatedAt: new Date()
+                updatedAt: firebase.firestore.Timestamp.fromDate(new Date())
             });
         } else {
             // Create new task
             savePromise = tasksRef.add({
                 ...taskData,
-                createdAt: new Date()
+                createdAt: firebase.firestore.Timestamp.fromDate(new Date())
             });
         }
         
         savePromise
             .then(() => {
+                // Reset form and close modal
+                if (plannerNewTaskForm) {
+                    plannerNewTaskForm.reset();
+                    // Remove task ID if it exists
+                    const taskIdField = document.getElementById('task-id');
+                    if (taskIdField) {
+                        taskIdField.remove();
+                    }
+                }
+                closeModals();
+                
                 // Reload tasks
                 loadTasks();
             })
@@ -365,11 +410,11 @@ function createNewTask(e) {
                 alert('Failed to save task. Please try again.');
                 
                 // Hide loading
-                loadingOverlay.classList.add('hidden');
+                plannerLoadingOverlay.classList.add('hidden');
             });
     }).catch(error => {
         console.error('Authentication check failed:', error);
-        loadingOverlay.classList.add('hidden');
+        plannerLoadingOverlay.classList.add('hidden');
     });
 }
 
@@ -435,7 +480,7 @@ function toggleTaskCompletion(taskId, completed) {
 
 // Edit task
 function editTask(task) {
-    if (!newTaskModal || !newTaskForm) return;
+    if (!plannerNewTaskModal || !plannerNewTaskForm) return;
     
     // Populate form with task data
     document.getElementById('task-title').value = task.title || '';
@@ -460,7 +505,7 @@ function editTask(task) {
         taskIdField = document.createElement('input');
         taskIdField.type = 'hidden';
         taskIdField.id = 'task-id';
-        newTaskForm.appendChild(taskIdField);
+        plannerNewTaskForm.appendChild(taskIdField);
     }
     taskIdField.value = task.id;
     
@@ -469,7 +514,7 @@ function editTask(task) {
     document.querySelector('#new-task-form .btn-primary').textContent = 'Save Changes';
     
     // Show modal
-    newTaskModal.style.display = 'block';
+    plannerNewTaskModal.style.display = 'block';
 }
 
 // Delete task
@@ -479,7 +524,7 @@ function deleteTask(taskId) {
     if (!confirm('Are you sure you want to delete this task?')) return;
     
     // Show loading
-    loadingOverlay.classList.remove('hidden');
+    plannerLoadingOverlay.classList.remove('hidden');
     
     checkAuth().then(user => {
         db.collection('users').doc(user.uid).collection('tasks')
@@ -502,11 +547,11 @@ function deleteTask(taskId) {
                 alert('Failed to delete task. Please try again.');
                 
                 // Hide loading
-                loadingOverlay.classList.add('hidden');
+                plannerLoadingOverlay.classList.add('hidden');
             });
     }).catch(error => {
         console.error('Authentication check failed:', error);
-        loadingOverlay.classList.add('hidden');
+        plannerLoadingOverlay.classList.add('hidden');
     });
 }
 
