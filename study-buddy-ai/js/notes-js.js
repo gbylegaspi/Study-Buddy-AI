@@ -5,47 +5,105 @@ const saveNoteBtn = document.getElementById('save-note');
 const deleteNoteBtn = document.getElementById('delete-note');
 const noteSearch = document.getElementById('note-search');
 const newNoteBtn = document.getElementById('new-note');
-const folderItems = document.querySelectorAll('.notes-folders li');
-const loadingOverlay = document.querySelector('.loading-overlay');
+const notesLoadingOverlay = document.querySelector('.loading-overlay');
+const colorPicker = document.getElementById('note-color');
 
 // Quill editor
 let quill;
 
 // Global variables
 let currentNoteId = null;
-let currentFolder = 'all';
 let notes = [];
 let autoSaveTimeout = null;
 let isDirty = false;
+let isDeleting = false;
+
+// Debug function
+function debug(message, data = null) {
+    const timestamp = new Date().toISOString();
+    if (data) {
+        console.log(`[${timestamp}] ${message}:`, data);
+    } else {
+        console.log(`[${timestamp}] ${message}`);
+    }
+}
+
+// Check if required elements exist
+function checkRequiredElements() {
+    const requiredElements = {
+        'notes-list': notesList,
+        'note-title': noteTitle,
+        'save-note': saveNoteBtn,
+        'delete-note': deleteNoteBtn,
+        'note-search': noteSearch,
+        'new-note': newNoteBtn,
+        'editor': document.getElementById('editor'),
+        'note-color': colorPicker
+    };
+
+    const missingElements = Object.entries(requiredElements)
+        .filter(([_, element]) => !element)
+        .map(([id]) => id);
+
+    if (missingElements.length > 0) {
+        console.error('Missing required elements:', missingElements);
+        return false;
+    }
+
+    return true;
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initializing notes page...');
+    debug('Initializing notes page...');
+    
+    // Check if all required elements exist
+    if (!checkRequiredElements()) {
+        debug('Initialization failed: Missing required elements');
+        return;
+    }
     
     // Initialize Quill editor
-    quill = new Quill('#editor', {
-        theme: 'snow',
-        placeholder: 'Start writing...',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline', 'strike'],
-                ['blockquote', 'code-block'],
-                [{ 'header': 1 }, { 'header': 2 }],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{ 'color': [] }, { 'background': [] }],
-                ['clean']
-            ]
-        }
-    });
+    try {
+        quill = new Quill('#editor', {
+            theme: 'snow',
+            placeholder: 'Start writing...',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['blockquote', 'code-block'],
+                    [{ 'header': 1 }, { 'header': 2 }],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    [{ 'color': [] }, { 'background': [] }],
+                    ['clean']
+                ]
+            }
+        });
+        debug('Quill editor initialized successfully');
+    } catch (error) {
+        console.error('Failed to initialize Quill editor:', error);
+        return;
+    }
     
     // Add change listener for auto-save
     quill.on('text-change', function() {
+        if (isDeleting) return;
         isDirty = true;
         if (autoSaveTimeout) {
             clearTimeout(autoSaveTimeout);
         }
         autoSaveTimeout = setTimeout(autoSaveNote, 2000);
     });
+    
+    // Add color picker change listener
+    if (colorPicker) {
+        colorPicker.addEventListener('change', function() {
+            if (currentNoteId) {
+                isDirty = true;
+                saveNote();
+            }
+        });
+    }
     
     // Load notes
     loadNotes();
@@ -67,25 +125,9 @@ document.addEventListener('DOMContentLoaded', function() {
         newNoteBtn.addEventListener('click', createNewNote);
     }
     
-    // Folder selection
-    folderItems.forEach(folder => {
-        folder.addEventListener('click', function() {
-            // Update active folder
-            folderItems.forEach(f => f.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Get folder name from span text
-            const folderName = this.querySelector('span').textContent.toLowerCase();
-            currentFolder = folderName;
-            
-            // Filter notes by folder
-            filterNotesByFolder(folderName);
-        });
-    });
-    
     // Add beforeunload event listener
     window.addEventListener('beforeunload', function(e) {
-        if (isDirty) {
+        if (isDirty && !isDeleting) {
             e.preventDefault();
             e.returnValue = '';
         }
@@ -93,24 +135,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Hide loading spinner after delay
     setTimeout(() => {
-        loadingOverlay.classList.add('hidden');
+        if (notesLoadingOverlay) {
+            notesLoadingOverlay.classList.add('hidden');
+        }
     }, 500);
 });
 
 // Load notes from Firestore
 function loadNotes() {
     if (!db) {
-        console.error('Database not initialized');
+        debug('Database not initialized');
         return;
     }
     
-    console.log('Loading notes...');
+    debug('Loading notes...');
     
     // Show loading
-    loadingOverlay.classList.remove('hidden');
+    if (notesLoadingOverlay) {
+        notesLoadingOverlay.classList.remove('hidden');
+    }
     
     checkAuth().then(user => {
-        console.log('User authenticated, loading notes for:', user.uid);
+        debug('User authenticated, loading notes for:', user.uid);
         
         db.collection('users').doc(user.uid).collection('notes')
             .orderBy('updatedAt', 'desc')
@@ -121,7 +167,7 @@ function loadNotes() {
                     notes = [];
                     
                     if (querySnapshot.empty) {
-                        console.log('No notes found');
+                        debug('No notes found');
                         notesList.innerHTML = `
                             <div class="empty-state animate__animated animate__fadeIn">
                                 <i class="fas fa-sticky-note"></i>
@@ -132,7 +178,7 @@ function loadNotes() {
                             </div>
                         `;
                     } else {
-                        console.log('Found', querySnapshot.size, 'notes');
+                        debug('Found notes:', querySnapshot.size);
                         querySnapshot.forEach(doc => {
                             const note = doc.data();
                             note.id = doc.id;
@@ -150,10 +196,12 @@ function loadNotes() {
                 }
                 
                 // Hide loading
-                loadingOverlay.classList.add('hidden');
+                if (notesLoadingOverlay) {
+                    notesLoadingOverlay.classList.add('hidden');
+                }
             })
             .catch(error => {
-                console.error('Error loading notes:', error);
+                debug('Error loading notes:', error);
                 
                 if (notesList) {
                     notesList.innerHTML = `
@@ -168,11 +216,15 @@ function loadNotes() {
                 }
                 
                 // Hide loading
-                loadingOverlay.classList.add('hidden');
+                if (notesLoadingOverlay) {
+                    notesLoadingOverlay.classList.add('hidden');
+                }
             });
     }).catch(error => {
-        console.error('Authentication check failed:', error);
-        loadingOverlay.classList.add('hidden');
+        debug('Authentication check failed:', error);
+        if (notesLoadingOverlay) {
+            notesLoadingOverlay.classList.add('hidden');
+        }
     });
 }
 
@@ -191,14 +243,15 @@ function createNoteElement(note) {
         note.content.replace(/<[^>]*>/g, '').substring(0, 50) : 
         'No content';
     
+    // Set note color
+    const noteColor = note.color || '#ffffff';
+    noteElement.style.backgroundColor = noteColor;
+    
     noteElement.innerHTML = `
         <div class="note-info">
             <h3>${note.title || 'Untitled Note'}</h3>
             <p class="note-preview">${contentPreview}${contentPreview.length >= 50 ? '...' : ''}</p>
             <p class="note-date">${formattedDate}</p>
-        </div>
-        <div class="note-tags">
-            ${note.folder ? `<span class="tag">${note.folder}</span>` : ''}
         </div>
     `;
     
@@ -212,7 +265,7 @@ function createNoteElement(note) {
 
 // Select a note
 function selectNote(note) {
-    console.log('Selecting note:', note.id);
+    debug('Selecting note:', note.id);
     
     // Set current note ID
     currentNoteId = note.id;
@@ -220,6 +273,9 @@ function selectNote(note) {
     // Update UI
     noteTitle.value = note.title || '';
     quill.root.innerHTML = note.content || '';
+    if (colorPicker) {
+        colorPicker.value = note.color || '#ffffff';
+    }
     
     // Highlight selected note
     const noteItems = document.querySelectorAll('.note-item');
@@ -239,44 +295,46 @@ function selectNote(note) {
 
 // Auto-save note
 function autoSaveNote() {
-    if (!isDirty || !currentNoteId) return;
+    if (!isDirty || !currentNoteId || isDeleting) return;
     
-    console.log('Auto-saving note...');
+    debug('Auto-saving note...');
     saveNote(true);
 }
 
 // Save note
 function saveNote(isAutoSave = false) {
     if (!db) {
-        console.error('Database not initialized');
+        debug('Database not initialized');
         return;
     }
     
     if (!currentNoteId) {
-        console.log('Creating new note...');
+        debug('Creating new note...');
         createNewNote();
         return;
     }
     
-    console.log('Saving note:', currentNoteId);
+    debug('Saving note:', currentNoteId);
     
     // Show loading
     if (!isAutoSave) {
-        loadingOverlay.classList.remove('hidden');
+        if (notesLoadingOverlay) {
+            notesLoadingOverlay.classList.remove('hidden');
+        }
     }
     
     checkAuth().then(user => {
         const noteData = {
             title: noteTitle.value || 'Untitled Note',
             content: quill.root.innerHTML,
-            folder: currentFolder === 'all' ? null : currentFolder,
+            color: colorPicker ? colorPicker.value : '#ffffff',
             updatedAt: firebase.firestore.Timestamp.fromDate(new Date())
         };
         
         db.collection('users').doc(user.uid).collection('notes').doc(currentNoteId)
             .update(noteData)
             .then(() => {
-                console.log('Note saved successfully');
+                debug('Note saved successfully');
                 
                 // Update note in list
                 updateNoteInList(noteData);
@@ -286,11 +344,13 @@ function saveNote(isAutoSave = false) {
                 
                 // Hide loading
                 if (!isAutoSave) {
-                    loadingOverlay.classList.add('hidden');
+                    if (notesLoadingOverlay) {
+                        notesLoadingOverlay.classList.add('hidden');
+                    }
                 }
             })
             .catch(error => {
-                console.error('Error saving note:', error);
+                debug('Error saving note:', error);
                 
                 // Show error message
                 if (!isAutoSave) {
@@ -299,31 +359,38 @@ function saveNote(isAutoSave = false) {
                 
                 // Hide loading
                 if (!isAutoSave) {
-                    loadingOverlay.classList.add('hidden');
+                    if (notesLoadingOverlay) {
+                        notesLoadingOverlay.classList.add('hidden');
+                    }
                 }
             });
     }).catch(error => {
-        console.error('Authentication check failed:', error);
+        debug('Authentication check failed:', error);
         if (!isAutoSave) {
-            loadingOverlay.classList.add('hidden');
+            if (notesLoadingOverlay) {
+                notesLoadingOverlay.classList.add('hidden');
+            }
         }
     });
 }
 
 // Create new note
 function createNewNote() {
-    console.log('Creating new note...');
+    debug('Creating new note...');
     
     // Reset editor
     noteTitle.value = '';
     quill.root.innerHTML = '';
+    if (colorPicker) {
+        colorPicker.value = '#ffffff';
+    }
     
     // Create note in Firestore
     checkAuth().then(user => {
         const noteData = {
             title: '',
             content: '',
-            folder: currentFolder === 'all' ? null : currentFolder,
+            color: colorPicker ? colorPicker.value : '#ffffff',
             createdAt: firebase.firestore.Timestamp.fromDate(new Date()),
             updatedAt: firebase.firestore.Timestamp.fromDate(new Date())
         };
@@ -331,7 +398,7 @@ function createNewNote() {
         db.collection('users').doc(user.uid).collection('notes')
             .add(noteData)
             .then(docRef => {
-                console.log('New note created:', docRef.id);
+                debug('New note created:', docRef.id);
                 
                 // Add note to list
                 noteData.id = docRef.id;
@@ -347,11 +414,11 @@ function createNewNote() {
                 isDirty = false;
             })
             .catch(error => {
-                console.error('Error creating note:', error);
+                debug('Error creating note:', error);
                 alert('Error creating note. Please try again.');
             });
     }).catch(error => {
-        console.error('Authentication check failed:', error);
+        debug('Authentication check failed:', error);
     });
 }
 
@@ -363,16 +430,27 @@ function deleteNote() {
         return;
     }
     
-    console.log('Deleting note:', currentNoteId);
+    debug('Deleting note:', currentNoteId);
+    
+    // Set deleting flag
+    isDeleting = true;
+    
+    // Clear any pending auto-save
+    if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = null;
+    }
     
     // Show loading
-    loadingOverlay.classList.remove('hidden');
+    if (notesLoadingOverlay) {
+        notesLoadingOverlay.classList.remove('hidden');
+    }
     
     checkAuth().then(user => {
         db.collection('users').doc(user.uid).collection('notes').doc(currentNoteId)
             .delete()
             .then(() => {
-                console.log('Note deleted successfully');
+                debug('Note deleted successfully');
                 
                 // Remove note from list
                 const noteElement = document.querySelector(`.note-item[data-note-id="${currentNoteId}"]`);
@@ -408,16 +486,29 @@ function deleteNote() {
                 }
                 
                 // Hide loading
-                loadingOverlay.classList.add('hidden');
+                if (notesLoadingOverlay) {
+                    notesLoadingOverlay.classList.add('hidden');
+                }
+                
+                // Reset deleting flag after a short delay
+                setTimeout(() => {
+                    isDeleting = false;
+                }, 1000);
             })
             .catch(error => {
-                console.error('Error deleting note:', error);
+                debug('Error deleting note:', error);
                 alert('Error deleting note. Please try again.');
-                loadingOverlay.classList.add('hidden');
+                if (notesLoadingOverlay) {
+                    notesLoadingOverlay.classList.add('hidden');
+                }
+                isDeleting = false;
             });
     }).catch(error => {
-        console.error('Authentication check failed:', error);
-        loadingOverlay.classList.add('hidden');
+        debug('Authentication check failed:', error);
+        if (notesLoadingOverlay) {
+            notesLoadingOverlay.classList.add('hidden');
+        }
+        isDeleting = false;
     });
 }
 
@@ -437,19 +528,6 @@ function filterNotes() {
         return title.includes(searchTerm) || content.includes(searchTerm);
     });
     
-    updateNotesListUI(filteredNotes);
-}
-
-// Filter notes by folder
-function filterNotesByFolder(folderName) {
-    console.log('Filtering notes by folder:', folderName);
-    
-    if (folderName === 'all') {
-        updateNotesListUI(notes);
-        return;
-    }
-    
-    const filteredNotes = notes.filter(note => note.folder === folderName);
     updateNotesListUI(filteredNotes);
 }
 
