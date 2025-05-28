@@ -10,8 +10,12 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "cleanUrls": true,
+    "cleanUrls": false,
     "rewrites": [
+      {
+        "source": "/",
+        "destination": "/index.html"
+      },
       {
         "source": "/login",
         "destination": "/login.html"
@@ -21,12 +25,33 @@
         "destination": "/dashboard.html"
       },
       {
-        "source": "!**/*.*",
+        "source": "/pages/planner",
+        "destination": "/pages/planner.html"
+      },
+      {
+        "source": "/pages/notes",
+        "destination": "/pages/notes.html"
+      },
+      {
+        "source": "/pages/flashcards",
+        "destination": "/pages/flashcards.html"
+      },
+      {
+        "source": "/pages/profile",
+        "destination": "/pages/profile.html"
+      },
+      {
+        "source": "/pages/timer",
+        "destination": "/pages/timer.html"
+      },
+      {
+        "source": "/pages/progress",
+        "destination": "/pages/progress.html"
+      },
+      {
+        "source": "**",
         "destination": "/index.html"
       }
     ]
-  },
-  "storage": {
-    "rules": "storage.rules"
   }
 }

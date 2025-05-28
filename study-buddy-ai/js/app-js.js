@@ -14,76 +14,96 @@ const logoutBtn = document.getElementById('logout-btn');
 const toggleSidebarBtn = document.querySelector('.toggle-sidebar');
 const sidebar = document.querySelector('.sidebar');
 
-// Format date for display
-function formatDate() {
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const today = new Date();
-    return today.toLocaleDateString('en-US', options);
-}
+// Only initialize dashboard functionality if we're on the dashboard page
+function initializeDashboard() {
+    // Format date for display
+    function formatDate() {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const today = new Date();
+        return today.toLocaleDateString('en-US', options);
+    }
 
-// Set current date
-if (currentDate) {
-    currentDate.textContent = formatDate();
-}
+    // Set current date
+    if (currentDate) {
+        currentDate.textContent = formatDate();
+    }
 
-// Toggle sidebar on mobile
-if (toggleSidebarBtn) {
-    toggleSidebarBtn.addEventListener('click', function() {
-        sidebar.classList.toggle('active');
-    });
-}
-
-// Handle logout
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', function() {
-        // Show loading
-        loadingOverlay.classList.remove('hidden');
-        
-        auth.signOut()
-            .then(() => {
-                // Redirect to login page
-                window.location.href = 'login.html';
-            })
-            .catch((error) => {
-                console.error('Logout error:', error);
-                loadingOverlay.classList.add('hidden');
-            });
-    });
-}
-
-// Load user data
-function loadUserData() {
-    checkAuth()
-        .then(user => {
-            // Update user info
-            if (userName) {
-                userName.textContent = user.displayName || 'Study Buddy User';
-            }
-            
-            if (userEmail) {
-                userEmail.textContent = user.email;
-            }
-            
-            if (headerName) {
-                headerName.textContent = user.displayName?.split(' ')[0] || 'Student';
-            }
-            
-            if (userInitial) {
-                userInitial.textContent = (user.displayName || 'S')[0].toUpperCase();
-            }
-            
-            // Load user's study data from Firestore
-            return loadStudyData(user.uid);
-        })
-        .then(() => {
-            // Hide loading overlay
-            loadingOverlay.classList.add('hidden');
-        })
-        .catch(error => {
-            console.error('Error loading user data:', error);
-            loadingOverlay.classList.add('hidden');
+    // Toggle sidebar on mobile
+    if (toggleSidebarBtn && sidebar) {
+        toggleSidebarBtn.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
         });
+    }
+
+    // Handle logout
+    if (logoutBtn && loadingOverlay) {
+        logoutBtn.addEventListener('click', function() {
+            // Show loading
+            loadingOverlay.classList.remove('hidden');
+            
+            auth.signOut()
+                .then(() => {
+                    // Redirect to login page
+                    window.location.href = 'login.html';
+                })
+                .catch((error) => {
+                    console.error('Logout error:', error);
+                    loadingOverlay.classList.add('hidden');
+                });
+        });
+    }
+
+    // Load user data
+    function loadUserData() {
+        if (typeof checkAuth !== 'function') {
+            console.error('checkAuth function not found');
+            return;
+        }
+
+        checkAuth()
+            .then(user => {
+                // Update user info
+                if (userName) {
+                    userName.textContent = user.displayName || 'Study Buddy User';
+                }
+                
+                if (userEmail) {
+                    userEmail.textContent = user.email;
+                }
+                
+                if (headerName) {
+                    headerName.textContent = user.displayName?.split(' ')[0] || 'Student';
+                }
+                
+                if (userInitial) {
+                    userInitial.textContent = (user.displayName || 'S')[0].toUpperCase();
+                }
+                
+                // Load user's study data from Firestore
+                return loadStudyData(user.uid);
+            })
+            .then(() => {
+                // Hide loading overlay
+                if (loadingOverlay) {
+                    loadingOverlay.classList.add('hidden');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading user data:', error);
+                if (loadingOverlay) {
+                    loadingOverlay.classList.add('hidden');
+                }
+            });
+    }
+
+    // Only initialize if we're on the dashboard page
+    if (window.location.pathname.includes('dashboard')) {
+        loadUserData();
+    }
 }
+
+// Initialize dashboard if we're on the dashboard page
+initializeDashboard();
 
 // Load study data from Firestore
 function loadStudyData(userId) {

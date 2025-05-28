@@ -1,5 +1,3 @@
-
-
 // Handle password reset
 const forgotPasswordLink = document.querySelector('.forgot-password');
 if (forgotPasswordLink) {
@@ -106,7 +104,7 @@ if (loginForm) {
         
         // Sign in with Firebase
         auth.signInWithEmailAndPassword(email, password)
-            .then((userCredential) => {
+            .then(() => {
                 // Redirect to dashboard
                 window.location.href = 'dashboard.html';
             })
@@ -150,7 +148,7 @@ if (signupForm) {
                         return db.collection('users').doc(user.uid).set({
                             name: name,
                             email: email,
-                            createdAt: new Date(),
+                            createdAt: firebase.firestore.Timestamp.fromDate(new Date()),
                             subjects: []
                         });
                     }
@@ -191,7 +189,7 @@ googleButtons.forEach(button => {
                     return db.collection('users').doc(user.uid).set({
                         name: user.displayName,
                         email: user.email,
-                        createdAt: new Date(),
+                        createdAt: firebase.firestore.Timestamp.fromDate(new Date()),
                         subjects: []
                     });
                 }
@@ -206,7 +204,7 @@ googleButtons.forEach(button => {
                 // Hide loading
                 loadingOverlay.classList.add('hidden');
                 
-                alert(`Google sign-in failed: ${error.message}`);
+                alert(`Google sign in failed: ${error.message}`);
             });
     });
 });
@@ -214,9 +212,9 @@ googleButtons.forEach(button => {
 // Toggle password visibility
 togglePasswordButtons.forEach(button => {
     button.addEventListener('click', function() {
-        const passwordField = this.previousElementSibling;
-        const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
-        passwordField.setAttribute('type', type);
+        const input = this.previousElementSibling;
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
         this.classList.toggle('fa-eye');
         this.classList.toggle('fa-eye-slash');
     });
