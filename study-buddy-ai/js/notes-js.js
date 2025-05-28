@@ -18,10 +18,11 @@ let autoSaveTimeout = null;
 let isDirty = false;
 let isDeleting = false;
 let isInitialized = false;
+const DEBUG = false; // Set to true to enable debug logging
 
 // Debug function
 function debug(message, data = null) {
-    if (process.env.NODE_ENV === 'development') {
+    if (DEBUG) {
         const timestamp = new Date().toISOString();
         if (data) {
             console.log(`[${timestamp}] ${message}:`, data);
@@ -231,7 +232,7 @@ function addFloatingNewNoteButton() {
 
 // Load notes from Firestore
 async function loadNotes() {
-    if (!db) {
+    if (!db || !window.firestore) {
         debug('Database not initialized');
         showError('Database not available. Please refresh the page.');
         return;
@@ -246,9 +247,9 @@ async function loadNotes() {
     
     try {
         const user = await checkAuth();
-        const notesRef = db.collection('users').doc(user.uid).collection('notes');
-        
-        const snapshot = await notesRef.orderBy('updatedAt', 'desc').get();
+        const notesRef = window.firestore.collection(db, 'users', user.uid, 'notes');
+        const q = window.firestore.query(notesRef, window.firestore.orderBy('updatedAt', 'desc'));
+        const snapshot = await window.firestore.getDocs(q);
         
         notes = [];
         notesList.innerHTML = '';
@@ -284,7 +285,7 @@ async function saveNote(isAutoSave = false) {
     
     try {
         const user = await checkAuth();
-        const noteRef = db.collection('users').doc(user.uid).collection('notes').doc(currentNoteId);
+        const noteRef = window.firestore.doc(db, 'users', user.uid, 'notes', currentNoteId);
         
         const title = noteTitle.value.trim();
         const content = quill.root.innerHTML;
@@ -295,17 +296,17 @@ async function saveNote(isAutoSave = false) {
             return;
         }
         
-        await noteRef.update({
+        await window.firestore.updateDoc(noteRef, {
             title: title,
             content: content,
             color: color,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            updatedAt: new Date()
         });
         
         isDirty = false;
         
         if (!isAutoSave) {
-            showToast('Note saved successfully');
+            showToast('Note saved successfully', 'success');
         }
         
         // Update note in list
@@ -330,17 +331,17 @@ async function createNewNote() {
     
     try {
         const user = await checkAuth();
-        const notesRef = db.collection('users').doc(user.uid).collection('notes');
+        const notesRef = window.firestore.collection(db, 'users', user.uid, 'notes');
         
         const newNote = {
             title: 'Untitled Note',
             content: '',
             color: '#ffffff',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: new Date(),
+            updatedAt: new Date()
         };
         
-        const docRef = await notesRef.add(newNote);
+        const docRef = await window.firestore.addDoc(notesRef, newNote);
         
         // Add to local array
         const note = { id: docRef.id, ...newNote };
@@ -356,7 +357,7 @@ async function createNewNote() {
         noteTitle.focus();
         noteTitle.select();
         
-        showToast('New note created');
+        showToast('New note created', 'success');
         
     } catch (error) {
         console.error('Error creating note:', error);
@@ -376,9 +377,9 @@ async function deleteNote() {
     
     try {
         const user = await checkAuth();
-        const noteRef = db.collection('users').doc(user.uid).collection('notes').doc(currentNoteId);
+        const noteRef = window.firestore.doc(db, 'users', user.uid, 'notes', currentNoteId);
         
-        await noteRef.delete();
+        await window.firestore.deleteDoc(noteRef);
         
         // Remove from local array
         notes = notes.filter(note => note.id !== currentNoteId);
@@ -409,7 +410,7 @@ async function deleteNote() {
             selectNote(notes[0]);
         }
         
-        showToast('Note deleted successfully');
+        showToast('Note deleted successfully', 'success');
         
     } catch (error) {
         console.error('Error deleting note:', error);

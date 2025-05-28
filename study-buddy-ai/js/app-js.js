@@ -5,14 +5,14 @@ const userEmail = document.getElementById('user-email');
 const headerName = document.getElementById('header-name');
 const currentDate = document.getElementById('current-date');
 const upcomingTasks = document.getElementById('upcoming-tasks');
-const tasksCompleted = document.getElementById('tasks-completed');
-const focusSessions = document.getElementById('focus-sessions');
-const studyStreak = document.getElementById('study-streak');
-const progressChart = document.getElementById('progress-chart');
+const progressChart = null;
 const loadingOverlay = document.querySelector('.loading-overlay');
 const logoutBtn = document.getElementById('logout-btn');
 const toggleSidebarBtn = document.querySelector('.toggle-sidebar');
 const sidebar = document.querySelector('.sidebar');
+const studyStreak = null;
+const focusSessions = null;
+const tasksCompleted = null;
 
 // Only initialize dashboard functionality if we're on the dashboard page
 function initializeDashboard() {
@@ -105,9 +105,51 @@ function initializeDashboard() {
 // Initialize dashboard if we're on the dashboard page
 initializeDashboard();
 
+// Load user data
+window.loadUserData = async function() {
+    try {
+        const user = await checkAuth();
+        if (!user) {
+            console.error('No authenticated user found');
+            return;
+        }
+
+        // Load user document
+        const userDocRef = window.firestore.doc(db, 'users', user.uid);
+        const userDoc = await window.firestore.getDoc(userDocRef);
+        
+        if (!userDoc.exists()) {
+            console.log('Creating new user document');
+            // Create new user document with default values
+            const userData = {
+                email: user.email,
+                displayName: user.displayName || user.email.split('@')[0],
+                createdAt: new Date(),
+                tasksCompleted: 0,
+                focusSessions: 0,
+                streak: 0,
+                lastActive: new Date()
+            };
+            
+            await window.firestore.setDoc(userDocRef, userData);
+            return userData;
+        }
+        
+        // Update last active timestamp
+        await window.firestore.updateDoc(userDocRef, {
+            lastActive: new Date()
+        });
+        
+        return userDoc.data();
+    } catch (error) {
+        console.error('Error loading user data:', error);
+        throw error;
+    }
+};
+
 // Load study data from Firestore
 function loadStudyData(userId) {
-    if (!db) {
+    if (!db || !window.firestore) {
         console.error('Database not initialized');
         return Promise.resolve();
     }
@@ -115,9 +157,10 @@ function loadStudyData(userId) {
     console.log('Loading study data for user:', userId);
     
     // Get user document
-    return db.collection('users').doc(userId).get()
+    const userDocRef = window.firestore.doc(db, 'users', userId);
+    return window.firestore.getDoc(userDocRef)
         .then(doc => {
-            if (doc.exists) {
+            if (doc.exists()) {
                 const userData = doc.data();
                 console.log('User data found:', userData);
                 
@@ -130,11 +173,11 @@ function loadStudyData(userId) {
                     tasksCompleted: 0,
                     focusSessions: 0,
                     streak: 0,
-                    createdAt: firebase.firestore.Timestamp.fromDate(new Date()),
-                    updatedAt: firebase.firestore.Timestamp.fromDate(new Date())
+                    createdAt: new Date(),
+                    updatedAt: new Date()
                 };
                 
-                return db.collection('users').doc(userId).set(userData)
+                return window.firestore.setDoc(userDocRef, userData)
                     .then(() => {
                         console.log('Created new user document');
                         return loadUpcomingTasks(userId).then(() => userData);
@@ -152,7 +195,7 @@ function loadStudyData(userId) {
 
 // Load upcoming tasks
 function loadUpcomingTasks(userId) {
-    if (!db || !upcomingTasks) {
+    if (!db || !window.firestore || !upcomingTasks) {
         console.error('Database or upcoming tasks element not found');
         return Promise.resolve();
     }
@@ -160,9 +203,10 @@ function loadUpcomingTasks(userId) {
     console.log('Loading tasks for user:', userId);
     
     // Get tasks collection - simplified query to avoid index requirement
-    return db.collection('users').doc(userId).collection('tasks')
-        .where('completed', '==', false)
-        .get()
+    const tasksRef = window.firestore.collection(db, 'users', userId, 'tasks');
+    const q = window.firestore.query(tasksRef, window.firestore.where('completed', '==', false));
+    
+    return window.firestore.getDocs(q)
         .then(querySnapshot => {
             console.log('Tasks query result:', querySnapshot.size, 'tasks found');
             
@@ -238,57 +282,14 @@ function loadUpcomingTasks(userId) {
         });
 }
 
-// Update stats display
-function updateStats(userData) {
-    // Animate stats counting up
-    function animateValue(element, start, end, duration) {
-        let startTimestamp = null;
-        const step = (timestamp) => {
-            if (!startTimestamp) startTimestamp = timestamp;
-            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-            const value = Math.floor(progress * (end - start) + start);
-            element.textContent = value;
-            if (progress < 1) {
-                window.requestAnimationFrame(step);
-            }
-        };
-        window.requestAnimationFrame(step);
-    }
-    
-    if (tasksCompleted) {
-        const value = userData.tasksCompleted || 0;
-        animateValue(tasksCompleted, 0, value, 1000);
-    }
-    
-    if (focusSessions) {
-        const value = userData.focusSessions || 0;
-        animateValue(focusSessions, 0, value, 1000);
-    }
-    
-    if (studyStreak) {
-        const value = userData.streak || 0;
-        animateValue(studyStreak, 0, value, 1000);
-    }
-    
-    // In a real app, we would implement chart rendering here
-    // using a library like Chart.js
-    if (progressChart) {
-        // For now, just show placeholder
-        progressChart.innerHTML = `
-            <div class="chart-placeholder animate__animated animate__fadeIn">
-                <i class="fas fa-chart-pie"></i>
-                <p>Progress data will appear here</p>
-            </div>
-        `;
-    }
-}
-
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Content Loaded');
     
     // Load user data
-    loadUserData();
+    loadUserData().catch(error => {
+        console.error('Failed to load user data:', error);
+    });
     
     // Set active nav item
     setActiveNavItem();

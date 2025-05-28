@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.quilljs.com/1.3.6/quill.snow.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="../css/components-css.css">
 </head>
 <body>
     <div class="app-container">
@@ -41,37 +42,31 @@
                         </a>
                     </li>
                     <li>
-                        <a href="planner.html">
+                        <a href="../pages/planner.html">
                             <i class="fas fa-tasks"></i>
                             <span>Study Planner</span>
                         </a>
                     </li>
                     <li>
-                        <a href="timer.html">
+                        <a href="../pages/timer.html">
                             <i class="fas fa-clock"></i>
                             <span>Pomodoro Timer</span>
                         </a>
                     </li>
                     <li class="active">
-                        <a href="notes.html">
+                        <a href="../pages/notes.html">
                             <i class="fas fa-sticky-note"></i>
                             <span>Notes</span>
                         </a>
                     </li>
                     <li>
-                        <a href="flashcards.html">
+                        <a href="../pages/flashcards.html">
                             <i class="fas fa-clone"></i>
                             <span>Flashcards</span>
                         </a>
                     </li>
                     <li>
-                        <a href="progress.html">
-                            <i class="fas fa-chart-line"></i>
-                            <span>Progress</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="profile.html">
+                        <a href="../pages/profile.html">
                             <i class="fas fa-user"></i>
                             <span>Profile</span>
                         </a>
@@ -84,12 +79,16 @@
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Logout</span>
                 </button>
+                <a href="#" class="btn btn-settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
             </div>
         </aside>
 
         <!-- Main Content -->
         <main class="main-content">
-            <header class="content-header">
+            <header class="content-header animate__animated animate__fadeIn">
                 <h1>Notes</h1>
                 <div class="header-actions">
                     <button id="new-note" class="btn btn-primary">
@@ -147,16 +146,80 @@
     </div>
 
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, query, where, orderBy, getDocs, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDwYeYqxzuuA07COZgB2ORb-g5a5583ZBs",
+            authDomain: "study-buddy-ai-d2127.firebaseapp.com",
+            projectId: "study-buddy-ai-d2127",
+            messagingSenderId: "562459365865",
+            appId: "1:562459365865:web:1f710be4af9f4be1747b78"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Make Firebase instances and functions available globally
+        window.auth = auth;
+        window.db = db;
+        window.firestore = {
+            collection,
+            doc,
+            getDoc,
+            setDoc,
+            updateDoc,
+            query,
+            where,
+            orderBy,
+            getDocs,
+            addDoc,
+            deleteDoc
+        };
+
+        // Check authentication state
+        window.checkAuth = () => {
+            return new Promise((resolve, reject) => {
+                const unsubscribe = onAuthStateChanged(auth, (user) => {
+                    unsubscribe(); // Unsubscribe after first check
+                    if (user) {
+                        resolve(user);
+                    } else {
+                        reject(new Error('User not authenticated'));
+                        // Redirect to login if not on login page
+                        const path = window.location.pathname;
+                        if (!path.endsWith('/login') && !path.endsWith('/login.html') && 
+                            !path.endsWith('/') && !path.endsWith('/index.html')) {
+                            window.location.href = '../login.html';
+                        }
+                    }
+                }, (error) => {
+                    unsubscribe(); // Unsubscribe on error
+                    reject(error);
+                });
+            });
+        };
+
+        // Check auth state on page load
+        const path = window.location.pathname;
+        if (!path.endsWith('/login') && !path.endsWith('/login.html') && 
+            !path.endsWith('/') && !path.endsWith('/index.html')) {
+            checkAuth().catch(error => {
+                console.error("Authentication check failed:", error);
+            });
+        }
+    </script>
     
     <!-- Quill Editor -->
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     
     <!-- JavaScript Files -->
-    <script src="../js/firebase-config-js.js"></script>
     <script src="../js/notes-js.js"></script>
     <script src="../js/app-js.js"></script>
 
@@ -408,6 +471,59 @@
                 gap: 15px;
                 align-items: flex-start;
             }
+        }
+
+        /* Error message styles */
+        .error-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #dc3545;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+        }
+
+        /* Toast message styles */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 10000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .toast-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .toast-error {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
     </style>
 </body>
